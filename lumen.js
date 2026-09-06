@@ -3,12 +3,12 @@
 
     var PLUGIN_NAME = 'Lumen TEST';
     var COMPONENT = 'lumen_test';
-    var VERSION = '0.0.5';
+    var VERSION = '0.0.7';
 
     if (window.lumen_test_loaded) return;
     window.lumen_test_loaded = true;
 
-    // Безопасный сериализатор для объектов Lampa (игнорирует циклические ссылки)
+    // Безопасный сериализатор для JSON
     function safeStringify(obj) {
         var cache = new Set();
         return JSON.stringify(obj, function (key, value) {
@@ -22,40 +22,91 @@
         }, 2);
     }
 
-    function component(object) {
-        var container = document.createElement('div');
-        container.style.padding = '2em';
-        container.style.color = '#fff';
-        container.style.fontSize = '1.1em';
-        container.style.whiteSpace = 'pre-wrap';
-        container.style.overflow = 'auto';
-        container.style.height = '80vh';
+    // Класс компонента по стандарту Lampa
+    function LumenComponent(object) {
+        var scroll = new Lampa.Scroll({ mask: true, over: true });
+        var html   = $('<div></div>');
+        var body   = $('<div class="lumen-test-body"></div>');
 
-        var title = document.createElement('div');
-        title.textContent = 'LUMEN: ОБЪЕКТ CARD / MOVIE';
-        title.style.fontSize = '1.5em';
-        title.style.marginBottom = '1em';
-        container.appendChild(title);
+        // Обязательный метод 1: Создание экрана
+        this.create = function () {
+            var _this = this;
 
-        var output = document.createElement('div');
+            // Скрываем индикатор загрузки Lampa
+            if (this.activity && this.activity.loader) {
+                this.activity.loader(false);
+            }
 
-        try {
-            // Берем данные из object.movie, которые мы явно прокинули при push
-            var dataToRender = object.movie || object.card || object;
-            output.textContent = safeStringify(dataToRender);
-        } catch (e) {
-            output.textContent = 'Ошибка сериализации:\n\n' + e.toString();
-        }
+            body.css({
+                'padding': '1.5em',
+                'color': '#fff',
+                'font-size': '1.1em',
+                'white-space': 'pre-wrap',
+                'word-break': 'break-all',
+                'font-family': 'monospace'
+            });
 
-        container.appendChild(output);
-        return container;
+            var title = $('<div style="font-size: 1.4em; font-weight: bold; margin-bottom: 1em; color: #4ae08a;">LUMEN: OBJECT DATA</div>');
+            body.append(title);
+
+            var output = $('<div></div>');
+
+            try {
+                var dataToRender = object.movie || object.card || object;
+                output.text(safeStringify(dataToRender));
+            } catch (e) {
+                output.text('Ошибка сериализации:\n\n' + e.toString());
+            }
+
+            body.append(output);
+
+            scroll.minus();
+            scroll.append(body);
+            html.append(scroll.render());
+
+            return this.render();
+        };
+
+        // Обязательный метод 2: Возврат DOM-элемента
+        this.render = function () {
+            return html;
+        };
+
+        // Обязательный метод 3: Включение управления пультом
+        this.start = function () {
+            Lampa.Controller.add('content', {
+                toggle: function () {
+                    Lampa.Controller.collectionSet(scroll.render());
+                    Lampa.Controller.move();
+                },
+                up: function () {
+                    scroll.up();
+                },
+                down: function () {
+                    scroll.down();
+                },
+                back: function () {
+                    Lampa.Activity.back();
+                }
+            });
+
+            Lampa.Controller.toggle('content');
+        };
+
+        // Обязательный метод 4: Очистка памяти при закрытии
+        this.destroy = function () {
+            scroll.destroy();
+            html.remove();
+        };
     }
 
-    Lampa.Component.add(COMPONENT, component);
+    // Регистрируем компонент
+    Lampa.Component.add(COMPONENT, LumenComponent);
 
     function addButton() {
         try {
             var activity = Lampa.Activity.active();
+
             if (!activity || activity.component !== 'full') return;
 
             var render = activity.activity && activity.activity.render
@@ -75,19 +126,19 @@
 
             btn.on('hover:enter', function () {
                 var currentActivity = Lampa.Activity.active();
-                
-                // Получаем чистый объект фильма (без циклических DOM-деревьев)
                 var movieData = currentActivity.card || currentActivity.movie;
 
                 Lampa.Activity.push({
                     url: '',
                     title: PLUGIN_NAME,
                     component: COMPONENT,
-                    movie: movieData // Пробрасываем чистый объект
+                    movie: movieData,
+                    page: 1
                 });
             });
 
             buttons.last().after(btn);
+
         } catch (e) {
             console.log('LUMEN BUTTON ERROR:', e);
         }
@@ -99,4 +150,6 @@
             setTimeout(addButton, 800);
         });
     }
+
+    console.log('LUMEN TEST ' + VERSION + ' LOADED');
 })();
