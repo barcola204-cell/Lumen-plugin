@@ -7,29 +7,28 @@
 
             btn.on('hover:enter', function () {
                 var card = e.data.movie;
-                var kp_id = card.kinopoisk_id || '';
+                var kp_id = card.kinopoisk_id || (card.account && card.account.kinopoisk_id) || '';
                 var imdb_id = card.imdb_id || '';
-                var title = card.title || card.name || '';
-                var year = (card.release_date || card.first_air_date || '').slice(0, 4);
+                var title = card.title || card.name || card.original_title || '';
 
                 Lampa.Loading.start(function () { Lampa.Loading.stop(); });
 
-                // Функция отправки запроса к воркеру
-                var sendQuery = function (kp, imdb) {
-                    var url = 'https://lumen-proxy.barcola204.workers.dev/?kp=' + kp + '&imdb=' + imdb;
+                var requestWorker = function (params) {
+                    var query = new URLSearchParams(params).toString();
+                    var url = 'https://lumen-proxy.barcola204.workers.dev/?' + query;
 
                     fetch(url)
                         .then(function (res) { return res.json(); })
                         .then(function (data) {
                             Lampa.Loading.stop();
                             if (!data || !data.length) {
-                                Lampa.Noty.show('Источники не найдены');
+                                Lampa.Noty.show('Lumen: Потоки не найдены (пустой ответ)');
                                 return;
                             }
                             
                             var items = data.map(function (item) {
                                 return {
-                                    title: item.name || 'Источник',
+                                    title: (item.name || 'Источник') + (item.quality ? ' [' + item.quality + ']' : ''),
                                     url: item.url
                                 };
                             });
@@ -42,31 +41,23 @@
                                 }
                             });
                         })
-                        .catch(function () {
+                        .catch(function (err) {
                             Lampa.Loading.stop();
-                            Lampa.Noty.show('Ошибка подключения к воркеру');
+                            Lampa.Noty.show('Lumen: Ошибка воркера ' + err.message);
                         });
                 };
 
-                // Если KP ID нет, пробуем автопоиск по Kinopoisk Unofficial API
-                if (!kp_id) {
-                    var searchUrl = 'https://kinopoiskapiunofficial.tech/api/v2.1/films/search-by-keyword?keyword=' + encodeURIComponent(title);
-                    
-                    fetch(searchUrl, {
-                        headers: { 'X-API-KEY': '2b910f3c-843e-46cf-9d7a-117565b90f42' }
-                    })
-                    .then(function (res) { return res.json(); })
-                    .then(function (searchData) {
-                        if (searchData && searchData.films && searchData.films.length) {
-                            kp_id = searchData.films[0].filmId;
-                        }
-                        sendQuery(kp_id, imdb_id);
-                    })
-                    .catch(function () {
-                        sendQuery(kp_id, imdb_id);
-                    });
+                // 1. Если есть KP ID или IMDb ID — шлем их
+                if (kp_id || imdb_id) {
+                    requestWorker({ kp: kp_id, imdb: imdb_id });
+                } 
+                // 2. Если ID нет — отправляем названиие фильма в воркер
+                else if (title) {
+                    Lampa.Noty.show('Поиск по названию: ' + title);
+                    requestWorker({ title: title });
                 } else {
-                    sendQuery(kp_id, imdb_id);
+                    Lampa.Loading.stop();
+                    Lampa.Noty.show('Lumen: Не найдено данных о фильме');
                 }
             });
 
