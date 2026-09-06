@@ -223,8 +223,4 @@
             description: 'Онлайн плагин Lumen',
             component: COMPONENT
         });
-    } catch (e) {}
-
-    console.log(PLUGIN_NAME + ' v' + VERSION + ' loaded');
-})();
               
