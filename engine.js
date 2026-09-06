@@ -1,27 +1,51 @@
 (function () {
     'use strict';
 
-    function openLumenPlayer(embedUrl, title) {
-        // Удаляем старый плеер, если был открыт
+    function loadKinoboxScript(callback) {
+        if (window.Kinobox) {
+            callback();
+            return;
+        }
+        var script = document.createElement('script');
+        script.src = 'https://kinobox.tv/kinobox.min.js';
+        script.onload = callback;
+        script.onerror = function () {
+            Lampa.Noty.show('Lumen: Ошибка загрузки скрипта Kinobox');
+        };
+        document.head.appendChild(script);
+    }
+
+    function openLumenPlayer(kp_id, title) {
         $('#lumen-player-container').remove();
 
-        // Создаем полноэкранный оверлей под стиль Lampa
         var overlay = $(
             '<div id="lumen-player-container" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: #000; z-index: 999999; display: flex; flex-direction: column;">' +
                 '<div style="height: 50px; background: #141414; display: flex; align-items: center; justify-content: space-between; padding: 0 20px; border-bottom: 1px solid #222;">' +
                     '<span style="color: #fff; font-size: 16px; font-weight: bold; font-family: sans-serif;">' + (title || 'Lumen Player') + '</span>' +
                     '<button id="lumen-close-btn" style="background: #e50914; color: #fff; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 14px;">Закрыть ✕</button>' +
                 '</div>' +
-                '<iframe src="' + embedUrl + '" style="width: 100%; height: calc(100vh - 50px); border: none;" allowfullscreen allow="autoplay; fullscreen"></iframe>' +
+                '<div class="kinobox_player" style="width: 100%; height: calc(100vh - 50px);"></div>' +
             '</div>'
         );
 
-        // Обработчик закрытия
         overlay.find('#lumen-close-btn').on('click touchstart', function () {
             overlay.remove();
         });
 
         $('body').append(overlay);
+
+        loadKinoboxScript(function () {
+            new Kinobox('.kinobox_player', {
+                search: {
+                    kinopoisk: kp_id,
+                    title: title
+                },
+                menu: {
+                    enable: true,
+                    default: 'menu'
+                }
+            }).init();
+        });
     }
 
     function createLumenButton(render, movieData) {
@@ -39,28 +63,7 @@
                 return;
             }
 
-            Lampa.Noty.show('Lumen: Поиск потока...');
-
-            var params = new URLSearchParams();
-            if (kp_id) params.append('kp', kp_id);
-            if (title) params.append('title', title);
-
-            fetch('https://lumen-proxy.barcola204.workers.dev/?' + params.toString())
-                .then(function (res) { return res.json(); })
-                .then(function (data) {
-                    if (!data || !Array.isArray(data) || data.length === 0) {
-                        Lampa.Noty.show('Lumen: Источник не найден');
-                        return;
-                    }
-
-                    var stream = data[0];
-                    if (stream && stream.url) {
-                        openLumenPlayer(stream.url, title);
-                    }
-                })
-                .catch(function (err) {
-                    Lampa.Noty.show('Lumen: Ошибка сети (' + err.message + ')');
-                });
+            openLumenPlayer(kp_id, title);
         });
 
         var container = render.find('.full-start__buttons, .full-start-new__buttons, .buttons').first();
