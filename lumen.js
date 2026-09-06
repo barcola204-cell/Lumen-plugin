@@ -5,67 +5,134 @@
     window.lumen_test_loaded = true;
 
     var COMPONENT = 'lumen_test';
-    var VERSION = '0.0.1';
+    var VERSION = '0.0.2';
 
-    console.log('[Lumen] START');
+    console.log('[Lumen] Loading ' + VERSION);
 
-    /*
-     * Простейший компонент.
-     * Никаких Explorer, Scroll или API,
-     * кроме базовых Lampa.Component и Activity.
-     */
+
+    // =========================================================
+    // COMPONENT
+    // =========================================================
 
     function component(object) {
 
+        var destroyed = false;
+        var container;
+
+
+        // Создание компонента
         this.create = function () {
 
-            console.log('[Lumen] COMPONENT CREATE');
+            console.log('[Lumen] create()');
 
-            var html =
-                '<div style="' +
-                    'padding:3em;' +
-                    'text-align:center;' +
-                '">' +
 
-                    '<div style="' +
-                        'font-size:2em;' +
-                        'margin-bottom:1em;' +
-                    '">' +
-                        'Lumen работает' +
-                    '</div>' +
+            // Создаём настоящий DOM Node
+            container = document.createElement('div');
 
-                    '<div style="' +
-                        'opacity:0.7;' +
-                    '">' +
-                        'Компонент успешно запущен' +
-                    '</div>' +
+            container.className = 'lumen-test-container';
 
-                '</div>';
+            container.style.cssText =
+                'width:100%;' +
+                'height:100%;' +
+                'box-sizing:border-box;' +
+                'padding:3em;' +
+                'text-align:center;';
 
-            return html;
+
+            // Заголовок
+            var title = document.createElement('div');
+
+            title.style.cssText =
+                'font-size:2em;' +
+                'margin-bottom:1em;';
+
+            title.textContent =
+                'Lumen работает';
+
+
+            // Текст
+            var text = document.createElement('div');
+
+            text.style.cssText =
+                'font-size:1.2em;' +
+                'opacity:0.7;';
+
+            text.textContent =
+                'Наш компонент успешно создан';
+
+
+            // Информация
+            var info = document.createElement('div');
+
+            info.style.cssText =
+                'margin-top:1.5em;' +
+                'opacity:0.5;';
+
+            info.textContent =
+                'Lumen TEST ' + VERSION;
+
+
+            container.appendChild(title);
+            container.appendChild(text);
+            container.appendChild(info);
+
+
+            console.log(
+                '[Lumen] DOM Node created'
+            );
+
+
+            // ВАЖНО:
+            // Возвращаем именно Node,
+            // а не HTML-строку и не jQuery-объект.
+
+            return container;
         };
+
 
         this.render = function () {
-            return this.create();
+
+            return container;
         };
 
+
         this.start = function () {
-            console.log('[Lumen] START COMPONENT');
+
+            console.log(
+                '[Lumen] component started'
+            );
+
         };
+
 
         this.pause = function () {};
 
-        this.stop = function () {};
+
+        this.stop = function () {
+
+            console.log(
+                '[Lumen] component stopped'
+            );
+
+        };
+
 
         this.destroy = function () {
-            console.log('[Lumen] DESTROY');
+
+            destroyed = true;
+
+            console.log(
+                '[Lumen] component destroyed'
+            );
+
         };
+
     }
 
 
-    /*
-     * Регистрируем компонент
-     */
+    // =========================================================
+    // REGISTER COMPONENT
+    // =========================================================
 
     if (
         Lampa.Component &&
@@ -84,16 +151,16 @@
     } else {
 
         console.error(
-            '[Lumen] Lampa.Component.add not found'
+            '[Lumen] Component API unavailable'
         );
 
         return;
     }
 
 
-    /*
-     * Кнопка на странице фильма
-     */
+    // =========================================================
+    // BUTTON
+    // =========================================================
 
     function addButton() {
 
@@ -102,9 +169,13 @@
             var activity =
                 Lampa.Activity.active();
 
+
             if (!activity) return;
 
-            if (activity.component !== 'full') {
+
+            if (
+                activity.component !== 'full'
+            ) {
                 return;
             }
 
@@ -161,7 +232,22 @@
                 function () {
 
                     console.log(
-                        '[Lumen] BUTTON CLICK'
+                        '[Lumen] Button pressed'
+                    );
+
+
+                    var movie =
+                        activity.card ||
+                        activity.movie ||
+                        (
+                            activity.activity &&
+                            activity.activity.card
+                        );
+
+
+                    console.log(
+                        '[Lumen] Movie:',
+                        movie
                     );
 
 
@@ -173,9 +259,7 @@
 
                         component: COMPONENT,
 
-                        movie:
-                            activity.card ||
-                            activity.movie,
+                        movie: movie,
 
                         page: 1
 
@@ -189,23 +273,24 @@
 
 
             console.log(
-                '[Lumen] BUTTON ADDED'
+                '[Lumen] Button added'
             );
 
         } catch (error) {
 
             console.error(
-                '[Lumen] BUTTON ERROR',
+                '[Lumen] Button error:',
                 error
             );
 
         }
+
     }
 
 
-    /*
-     * Слушаем открытие карточки
-     */
+    // =========================================================
+    // LISTENERS
+    // =========================================================
 
     if (
         Lampa.Listener &&
@@ -245,9 +330,9 @@
     }
 
 
-    /*
-     * Manifest
-     */
+    // =========================================================
+    // MANIFEST
+    // =========================================================
 
     try {
 
@@ -265,7 +350,7 @@
                 name: 'Lumen TEST',
 
                 description:
-                    'Диагностический тест',
+                    'Lumen diagnostic plugin',
 
                 component: COMPONENT
 
@@ -276,7 +361,7 @@
     } catch (error) {
 
         console.error(
-            '[Lumen] Manifest error',
+            '[Lumen] Manifest error:',
             error
         );
 
@@ -284,8 +369,7 @@
 
 
     console.log(
-        '[Lumen] LOADED ' +
-        VERSION
+        '[Lumen] Loaded successfully'
     );
 
 })();
