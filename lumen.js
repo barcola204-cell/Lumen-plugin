@@ -1,12 +1,16 @@
 (function () {
     'use strict';
 
+    if (window.lumen_test_loaded) return;
+    window.lumen_test_loaded = true;
+
     var PLUGIN_NAME = 'Lumen TEST';
     var COMPONENT = 'lumen_test';
     var VERSION = '0.0.3';
 
-    if (window.lumen_test_loaded) return;
-    window.lumen_test_loaded = true;
+    // =========================
+    // COMPONENT
+    // =========================
 
     function component(object) {
 
@@ -22,6 +26,7 @@
         var title = document.createElement('div');
 
         title.textContent = 'LUMEN: ОБЪЕКТ ФИЛЬМА';
+
         title.style.fontSize = '1.5em';
         title.style.marginBottom = '1em';
 
@@ -57,7 +62,7 @@
         } catch (e) {
 
             output.textContent =
-                'Ошибка JSON: ' +
+                'Ошибка JSON:\n\n' +
                 e.toString();
 
         }
@@ -71,6 +76,10 @@
         COMPONENT,
         component
     );
+
+    // =========================
+    // BUTTON
+    // =========================
 
     function addButton() {
 
@@ -158,9 +167,6 @@
                         movie:
                             movie,
 
-                        activity:
-                            activity,
-
                         page: 1
 
                     });
@@ -182,6 +188,10 @@
         }
 
     }
+
+    // =========================
+    // LISTENERS
+    // =========================
 
     if (
         Lampa.Listener &&
@@ -223,6 +233,10 @@
         );
 
     }
+
+    // =========================
+    // MANIFEST
+    // =========================
 
     try {
 
