@@ -1,6 +1,29 @@
 (function () {
     'use strict';
 
+    function openLumenPlayer(embedUrl, title) {
+        // Удаляем старый плеер, если был открыт
+        $('#lumen-player-container').remove();
+
+        // Создаем полноэкранный оверлей под стиль Lampa
+        var overlay = $(
+            '<div id="lumen-player-container" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: #000; z-index: 999999; display: flex; flex-direction: column;">' +
+                '<div style="height: 50px; background: #141414; display: flex; align-items: center; justify-content: space-between; padding: 0 20px; border-bottom: 1px solid #222;">' +
+                    '<span style="color: #fff; font-size: 16px; font-weight: bold; font-family: sans-serif;">' + (title || 'Lumen Player') + '</span>' +
+                    '<button id="lumen-close-btn" style="background: #e50914; color: #fff; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 14px;">Закрыть ✕</button>' +
+                '</div>' +
+                '<iframe src="' + embedUrl + '" style="width: 100%; height: calc(100vh - 50px); border: none;" allowfullscreen allow="autoplay; fullscreen"></iframe>' +
+            '</div>'
+        );
+
+        // Обработчик закрытия
+        overlay.find('#lumen-close-btn').on('click touchstart', function () {
+            overlay.remove();
+        });
+
+        $('body').append(overlay);
+    }
+
     function createLumenButton(render, movieData) {
         if (!render || render.find('.button--lumen').length) return;
 
@@ -16,7 +39,7 @@
                 return;
             }
 
-            Lampa.Noty.show('Lumen: Запуск...');
+            Lampa.Noty.show('Lumen: Поиск потока...');
 
             var params = new URLSearchParams();
             if (kp_id) params.append('kp', kp_id);
@@ -32,17 +55,11 @@
 
                     var stream = data[0];
                     if (stream && stream.url) {
-                        // Открытие плеера через встроенный iframe Lampa
-                        Lampa.Activity.push({
-                            url: stream.url,
-                            title: title,
-                            component: 'iframe',
-                            page: 1
-                        });
+                        openLumenPlayer(stream.url, title);
                     }
                 })
                 .catch(function (err) {
-                    Lampa.Noty.show('Lumen: Ошибка (' + err.message + ')');
+                    Lampa.Noty.show('Lumen: Ошибка сети (' + err.message + ')');
                 });
         });
 
@@ -67,3 +84,4 @@
     if (window.appready) init();
     else if (window.Lampa) Lampa.Listener.follow('app', function (e) { if (e.type === 'ready') init(); });
 })();
+
