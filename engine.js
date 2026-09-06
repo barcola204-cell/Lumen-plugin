@@ -1,15 +1,15 @@
 (function () {
     'use strict';
 
-    function addLumenButton(render, movieData) {
+    function createLumenButton(render, movieData) {
         if (!render || render.find('.button--lumen').length) return;
 
-        var btn = $('<div class="full-start__button selector button--lumen" style="background: rgba(255,255,255,0.1); margin-left: 10px;"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg><span>Lumen Engine</span></div>');
+        var btn = $('<div class="full-start__button selector button--lumen" style="display: inline-flex !important; align-items: center; justify-content: center; background: #e50914 !important; color: #fff !important; padding: 10px 15px; border-radius: 8px; margin: 5px; cursor: pointer; font-weight: bold;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 8px;"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg><span>Lumen Engine</span></div>');
 
-        btn.on('hover:enter click', function () {
+        btn.on('click hover:enter', function () {
             var card = movieData || {};
             var kp_id = card.kinopoisk_id || (card.account && card.account.kinopoisk_id) || '';
-            var title = card.title || card.name || card.original_title || '';
+            var title = card.title || card.name || card.original_title || 'Фильм';
 
             Lampa.Noty.show('Lumen: Поиск источников...');
 
@@ -21,7 +21,7 @@
                 .then(function (res) { return res.json(); })
                 .then(function (data) {
                     if (!data || !Array.isArray(data) || data.length === 0) {
-                        Lampa.Noty.show('Lumen: Источники не найдены');
+                        Lampa.Noty.show('Lumen: Потоки не найдены');
                         return;
                     }
 
@@ -29,17 +29,28 @@
                         title: 'Lumen Engine',
                         items: data.map(function (item) {
                             return {
-                                title: item.name || 'Смотреть',
+                                title: item.name || item.title || 'Смотреть поток',
                                 subtitle: item.quality || 'Auto',
-                                url: item.url
+                                url: item.url || item.stream || item.file
                             };
                         }),
                         onSelect: function (element) {
                             if (element && element.url) {
-                                Lampa.Platform.screen('player', {
+                                // Прямой запуск встроенного плеера Lampa
+                                var playlist = [{
+                                    title: title,
+                                    url: element.url
+                                }];
+                                
+                                Lampa.Player.play({
+                                    title: title,
                                     url: element.url,
-                                    title: title
+                                    timeline: card.timeline || {},
+                                    playlist: playlist
                                 });
+                                Lampa.Player.playlist(playlist);
+                            } else {
+                                Lampa.Noty.show('Lumen: Ссылка на видео отсутствует');
                             }
                         },
                         onBack: function () {
@@ -48,33 +59,24 @@
                     });
                 })
                 .catch(function (err) {
-                    Lampa.Noty.show('Lumen: Ошибка ' + err.message);
+                    Lampa.Noty.show('Lumen: Ошибка (' + err.message + ')');
                 });
         });
 
-        // Пробуем вставить кнопку в разные возможные контейнеры Lampa
-        var target = render.find('.full-start__buttons, .full-start-new__buttons, .buttons').first();
-        if (target.length) {
-            target.append(btn);
+        var container = render.find('.full-start__buttons, .full-start-new__buttons, .buttons').first();
+        if (container.length) {
+            container.prepend(btn);
         } else {
-            render.find('.selector').last().after(btn);
+            render.append(btn);
         }
     }
 
     function init() {
-        // Уведомление при успешном старте плагина
-        setTimeout(function() {
-            if (window.Lampa && Lampa.Noty) {
-                Lampa.Noty.show('Lumen Plugin Loaded!');
-            }
-        }, 1000);
-
-        // Слушатель событий открытой карточки
         Lampa.Listener.follow('full', function (e) {
             if (e.type === 'complite' || e.type === 'build') {
                 var render = e.object.activity.render();
                 var movieData = e.data.movie;
-                addLumenButton(render, movieData);
+                createLumenButton(render, movieData);
             }
         });
     }
