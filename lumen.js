@@ -5,9 +5,7 @@
     window.lumen_test_loaded = true;
 
     var COMPONENT = 'lumen_test';
-    var VERSION = '0.0.2';
-
-    console.log('[Lumen] Loading ' + VERSION);
+    var VERSION = '0.0.3';
 
 
     // =========================================================
@@ -16,30 +14,22 @@
 
     function component(object) {
 
-        var destroyed = false;
         var container;
 
 
-        // Создание компонента
         this.create = function () {
 
-            console.log('[Lumen] create()');
-
-
-            // Создаём настоящий DOM Node
             container = document.createElement('div');
-
-            container.className = 'lumen-test-container';
 
             container.style.cssText =
                 'width:100%;' +
                 'height:100%;' +
                 'box-sizing:border-box;' +
-                'padding:3em;' +
-                'text-align:center;';
+                'padding:2em;' +
+                'overflow:auto;' +
+                'font-family:monospace;';
 
 
-            // Заголовок
             var title = document.createElement('div');
 
             title.style.cssText =
@@ -47,115 +37,89 @@
                 'margin-bottom:1em;';
 
             title.textContent =
-                'Lumen работает';
-
-
-            // Текст
-            var text = document.createElement('div');
-
-            text.style.cssText =
-                'font-size:1.2em;' +
-                'opacity:0.7;';
-
-            text.textContent =
-                'Наш компонент успешно создан';
-
-
-            // Информация
-            var info = document.createElement('div');
-
-            info.style.cssText =
-                'margin-top:1.5em;' +
-                'opacity:0.5;';
-
-            info.textContent =
-                'Lumen TEST ' + VERSION;
+                'Lumen — данные фильма';
 
 
             container.appendChild(title);
-            container.appendChild(text);
-            container.appendChild(info);
 
 
-            console.log(
-                '[Lumen] DOM Node created'
+            var info = document.createElement('div');
+
+            info.style.cssText =
+                'font-size:1.1em;' +
+                'line-height:1.6;' +
+                'white-space:pre-wrap;' +
+                'word-break:break-word;';
+
+
+            /*
+             * Показываем объект фильма,
+             * который Lampa передала компоненту.
+             */
+
+            var movie = object && (
+                object.movie ||
+                object.card
             );
 
 
-            // ВАЖНО:
-            // Возвращаем именно Node,
-            // а не HTML-строку и не jQuery-объект.
+            if (movie) {
+
+                try {
+
+                    info.textContent =
+                        JSON.stringify(
+                            movie,
+                            null,
+                            2
+                        );
+
+                } catch (error) {
+
+                    info.textContent =
+                        'Не удалось прочитать объект фильма';
+
+                }
+
+            } else {
+
+                info.textContent =
+                    'Lampa не передала объект movie';
+
+            }
+
+
+            container.appendChild(info);
+
 
             return container;
         };
 
 
         this.render = function () {
-
             return container;
         };
 
 
-        this.start = function () {
-
-            console.log(
-                '[Lumen] component started'
-            );
-
-        };
-
+        this.start = function () {};
 
         this.pause = function () {};
 
+        this.stop = function () {};
 
-        this.stop = function () {
-
-            console.log(
-                '[Lumen] component stopped'
-            );
-
-        };
-
-
-        this.destroy = function () {
-
-            destroyed = true;
-
-            console.log(
-                '[Lumen] component destroyed'
-            );
-
-        };
+        this.destroy = function () {};
 
     }
 
 
     // =========================================================
-    // REGISTER COMPONENT
+    // REGISTER
     // =========================================================
 
-    if (
-        Lampa.Component &&
-        Lampa.Component.add
-    ) {
-
-        Lampa.Component.add(
-            COMPONENT,
-            component
-        );
-
-        console.log(
-            '[Lumen] Component registered'
-        );
-
-    } else {
-
-        console.error(
-            '[Lumen] Component API unavailable'
-        );
-
-        return;
-    }
+    Lampa.Component.add(
+        COMPONENT,
+        component
+    );
 
 
     // =========================================================
@@ -170,10 +134,8 @@
                 Lampa.Activity.active();
 
 
-            if (!activity) return;
-
-
             if (
+                !activity ||
                 activity.component !== 'full'
             ) {
                 return;
@@ -231,11 +193,6 @@
                 'hover:enter',
                 function () {
 
-                    console.log(
-                        '[Lumen] Button pressed'
-                    );
-
-
                     var movie =
                         activity.card ||
                         activity.movie ||
@@ -243,12 +200,6 @@
                             activity.activity &&
                             activity.activity.card
                         );
-
-
-                    console.log(
-                        '[Lumen] Movie:',
-                        movie
-                    );
 
 
                     Lampa.Activity.push({
@@ -271,15 +222,10 @@
 
             buttons.last().after(button);
 
-
-            console.log(
-                '[Lumen] Button added'
-            );
-
         } catch (error) {
 
             console.error(
-                '[Lumen] Button error:',
+                '[Lumen]',
                 error
             );
 
@@ -330,46 +276,10 @@
     }
 
 
-    // =========================================================
-    // MANIFEST
-    // =========================================================
-
-    try {
-
-        if (
-            Lampa.Manifest &&
-            Lampa.Manifest.plugins
-        ) {
-
-            Lampa.Manifest.plugins.unshift({
-
-                type: 'video',
-
-                version: VERSION,
-
-                name: 'Lumen TEST',
-
-                description:
-                    'Lumen diagnostic plugin',
-
-                component: COMPONENT
-
-            });
-
-        }
-
-    } catch (error) {
-
-        console.error(
-            '[Lumen] Manifest error:',
-            error
-        );
-
-    }
-
-
     console.log(
-        '[Lumen] Loaded successfully'
+        'Lumen TEST ' +
+        VERSION +
+        ' loaded'
     );
 
 })();
