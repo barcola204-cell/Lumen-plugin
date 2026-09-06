@@ -13,52 +13,42 @@
 
                 Lampa.Loading.start(function () { Lampa.Loading.stop(); });
 
-                var requestWorker = function (params) {
-                    var query = new URLSearchParams(params).toString();
-                    var url = 'https://lumen-proxy.barcola204.workers.dev/?' + query;
+                // Формируем параметры запроса
+                var params = new URLSearchParams();
+                if (kp_id) params.append('kp', kp_id);
+                if (imdb_id) params.append('imdb', imdb_id);
+                if (title) params.append('title', title);
 
-                    fetch(url)
-                        .then(function (res) { return res.json(); })
-                        .then(function (data) {
-                            Lampa.Loading.stop();
-                            if (!data || !data.length) {
-                                Lampa.Noty.show('Lumen: Потоки не найдены (пустой ответ)');
-                                return;
-                            }
-                            
-                            var items = data.map(function (item) {
-                                return {
-                                    title: (item.name || 'Источник') + (item.quality ? ' [' + item.quality + ']' : ''),
-                                    url: item.url
-                                };
-                            });
+                var url = 'https://lumen-proxy.barcola204.workers.dev/?' + params.toString();
 
-                            Lampa.Select.show({
-                                title: 'Lumen Engine',
-                                items: items,
-                                onSelect: function (selected) {
-                                    Lampa.Platform.screen('player', { url: selected.url });
-                                }
-                            });
-                        })
-                        .catch(function (err) {
-                            Lampa.Loading.stop();
-                            Lampa.Noty.show('Lumen: Ошибка воркера ' + err.message);
+                fetch(url)
+                    .then(function (res) { return res.json(); })
+                    .then(function (data) {
+                        Lampa.Loading.stop();
+                        if (!data || !data.length) {
+                            Lampa.Noty.show('Lumen: Потоки не найдены');
+                            return;
+                        }
+                        
+                        var items = data.map(function (item) {
+                            return {
+                                title: item.name || 'Lumen Stream',
+                                url: item.url
+                            };
                         });
-                };
 
-                // 1. Если есть KP ID или IMDb ID — шлем их
-                if (kp_id || imdb_id) {
-                    requestWorker({ kp: kp_id, imdb: imdb_id });
-                } 
-                // 2. Если ID нет — отправляем названиие фильма в воркер
-                else if (title) {
-                    Lampa.Noty.show('Поиск по названию: ' + title);
-                    requestWorker({ title: title });
-                } else {
-                    Lampa.Loading.stop();
-                    Lampa.Noty.show('Lumen: Не найдено данных о фильме');
-                }
+                        Lampa.Select.show({
+                            title: 'Lumen Engine',
+                            items: items,
+                            onSelect: function (selected) {
+                                Lampa.Platform.screen('player', { url: selected.url });
+                            }
+                        });
+                    })
+                    .catch(function (err) {
+                        Lampa.Loading.stop();
+                        Lampa.Noty.show('Lumen: Ошибка ' + err.message);
+                    });
             });
 
             e.object.activity.render().find('.full-start__buttons').append(btn);
