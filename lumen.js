@@ -1,16 +1,12 @@
 (function () {
     'use strict';
 
-    if (window.lumen_test_loaded) return;
-    window.lumen_test_loaded = true;
-
     var PLUGIN_NAME = 'Lumen TEST';
     var COMPONENT = 'lumen_test';
-    var VERSION = '0.0.3';
+    var VERSION = '0.0.4';
 
-    // =========================
-    // COMPONENT
-    // =========================
+    if (window.lumen_test_loaded) return;
+    window.lumen_test_loaded = true;
 
     function component(object) {
 
@@ -24,9 +20,7 @@
         container.style.height = '80vh';
 
         var title = document.createElement('div');
-
-        title.textContent = 'LUMEN: ОБЪЕКТ ФИЛЬМА';
-
+        title.textContent = 'LUMEN: ОБЪЕКТ ACTIVITY';
         title.style.fontSize = '1.5em';
         title.style.marginBottom = '1em';
 
@@ -35,36 +29,17 @@
         var output = document.createElement('div');
 
         try {
-
-            var movie = object && (
-                object.movie ||
-                object.card
-            );
-
-            output.textContent = JSON.stringify(
-                movie,
-                function (key, value) {
-
-                    if (typeof value === 'function') {
-                        return '[FUNCTION]';
-                    }
-
-                    if (value instanceof HTMLElement) {
-                        return '[HTML ELEMENT]';
-                    }
-
-                    return value;
-
-                },
-                2
-            );
-
+            output.textContent = JSON.stringify(object, function (key, value) {
+                if (typeof value === 'function') return '[FUNCTION]';
+                if (value instanceof HTMLElement) return '[HTML ELEMENT]';
+                return value;
+            }, 2);
         } catch (e) {
-
             output.textContent =
                 'Ошибка JSON:\n\n' +
-                e.toString();
-
+                e.toString() +
+                '\n\nТип object: ' +
+                typeof object;
         }
 
         container.appendChild(output);
@@ -72,171 +47,88 @@
         return container;
     }
 
-    Lampa.Component.add(
-        COMPONENT,
-        component
-    );
-
-    // =========================
-    // BUTTON
-    // =========================
+    Lampa.Component.add(COMPONENT, component);
 
     function addButton() {
 
         try {
 
-            var activity =
-                Lampa.Activity.active();
+            var activity = Lampa.Activity.active();
 
             if (!activity) return;
 
-            if (activity.component !== 'full')
-                return;
+            if (activity.component !== 'full') return;
 
-            var render =
-                activity.activity &&
-                activity.activity.render
-                    ? activity.activity.render()
-                    : $('.full').last();
+            var render = activity.activity && activity.activity.render
+                ? activity.activity.render()
+                : $('.full').last();
 
-            if (!render || !render.length)
-                return;
+            if (!render || !render.length) return;
 
-            if (
-                render.find(
-                    '.lumen-test-btn'
-                ).length
-            ) {
-                return;
-            }
+            if (render.find('.lumen-test-btn').length) return;
 
-            var buttons =
-                render.find(
-                    '.full-start__button'
-                );
+            var buttons = render.find('.full-start__button');
 
-            if (!buttons.length)
-                return;
+            if (!buttons.length) return;
 
             var btn = $(
-                '<div class="' +
-                'full-start__button ' +
-                'selector lumen-test-btn">' +
-                '<span>' +
-                PLUGIN_NAME +
-                '</span>' +
+                '<div class="full-start__button selector lumen-test-btn">' +
+                    '<span>' + PLUGIN_NAME + '</span>' +
                 '</div>'
             );
 
-            btn.on(
-                'hover:enter',
-                function () {
+            btn.on('hover:enter', function () {
 
-                    console.log(
-                        'LUMEN: КНОПКА НАЖАТА'
-                    );
+                console.log('LUMEN: КНОПКА НАЖАТА');
 
-                    var movie =
-                        activity.card ||
-                        activity.movie ||
-                        (
-                            activity.activity &&
-                            activity.activity.card
-                        );
+                var movie =
+                    activity.card ||
+                    activity.movie ||
+                    (activity.activity && activity.activity.card);
 
-                    console.log(
-                        'LUMEN: MOVIE =',
-                        movie
-                    );
+                console.log('LUMEN: MOVIE =', movie);
+                console.log('LUMEN: ACTIVITY =', activity);
 
-                    console.log(
-                        'LUMEN: ACTIVITY =',
-                        activity
-                    );
+                Lampa.Activity.push({
+                    url: '',
+                    title: PLUGIN_NAME,
+                    component: COMPONENT,
 
-                    Lampa.Activity.push({
+                    movie: movie,
 
-                        url: '',
+                    activity: activity,
 
-                        title:
-                            PLUGIN_NAME,
+                    page: 1
+                });
 
-                        component:
-                            COMPONENT,
+            });
 
-                        movie:
-                            movie,
-
-                        page: 1
-
-                    });
-
-                }
-            );
-
-            buttons
-                .last()
-                .after(btn);
+            buttons.last().after(btn);
 
         } catch (e) {
 
-            console.log(
-                'LUMEN BUTTON ERROR:',
-                e
-            );
+            console.log('LUMEN BUTTON ERROR:', e);
 
         }
-
     }
 
-    // =========================
-    // LISTENERS
-    // =========================
+    if (Lampa.Listener && Lampa.Listener.follow) {
 
-    if (
-        Lampa.Listener &&
-        Lampa.Listener.follow
-    ) {
+        Lampa.Listener.follow('full', function () {
 
-        Lampa.Listener.follow(
-            'full',
-            function () {
+            setTimeout(addButton, 100);
+            setTimeout(addButton, 500);
+            setTimeout(addButton, 1200);
 
-                setTimeout(
-                    addButton,
-                    100
-                );
+        });
 
-                setTimeout(
-                    addButton,
-                    500
-                );
+        Lampa.Listener.follow('activity', function () {
 
-                setTimeout(
-                    addButton,
-                    1200
-                );
+            setTimeout(addButton, 300);
 
-            }
-        );
-
-        Lampa.Listener.follow(
-            'activity',
-            function () {
-
-                setTimeout(
-                    addButton,
-                    300
-                );
-
-            }
-        );
+        });
 
     }
-
-    // =========================
-    // MANIFEST
-    // =========================
 
     try {
 
@@ -245,29 +137,15 @@
         }
 
         Lampa.Manifest.plugins.unshift({
-
             type: 'video',
-
-            version:
-                VERSION,
-
-            name:
-                PLUGIN_NAME,
-
-            description:
-                'Lumen diagnostic plugin',
-
-            component:
-                COMPONENT
-
+            version: VERSION,
+            name: PLUGIN_NAME,
+            description: 'Lumen diagnostic plugin',
+            component: COMPONENT
         });
 
     } catch (e) {}
 
-    console.log(
-        'LUMEN TEST ' +
-        VERSION +
-        ' LOADED'
-    );
+    console.log('LUMEN TEST ' + VERSION + ' LOADED');
 
 })();
