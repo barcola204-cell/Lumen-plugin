@@ -3,15 +3,27 @@
 
     var PLUGIN_NAME = 'Lumen TEST';
     var COMPONENT = 'lumen_test';
-    var VERSION = '0.0.4';
+    var VERSION = '0.0.5';
 
     if (window.lumen_test_loaded) return;
     window.lumen_test_loaded = true;
 
+    // Безопасный сериализатор для объектов Lampa (игнорирует циклические ссылки)
+    function safeStringify(obj) {
+        var cache = new Set();
+        return JSON.stringify(obj, function (key, value) {
+            if (typeof value === 'object' && value !== null) {
+                if (cache.has(value)) return '[CIRCULAR]';
+                cache.add(value);
+            }
+            if (typeof value === 'function') return '[FUNCTION]';
+            if (value instanceof HTMLElement || (value && value.jquery)) return '[DOM ELEMENT]';
+            return value;
+        }, 2);
+    }
+
     function component(object) {
-
         var container = document.createElement('div');
-
         container.style.padding = '2em';
         container.style.color = '#fff';
         container.style.fontSize = '1.1em';
@@ -20,55 +32,39 @@
         container.style.height = '80vh';
 
         var title = document.createElement('div');
-        title.textContent = 'LUMEN: ОБЪЕКТ ACTIVITY';
+        title.textContent = 'LUMEN: ОБЪЕКТ CARD / MOVIE';
         title.style.fontSize = '1.5em';
         title.style.marginBottom = '1em';
-
         container.appendChild(title);
 
         var output = document.createElement('div');
 
         try {
-            output.textContent = JSON.stringify(object, function (key, value) {
-                if (typeof value === 'function') return '[FUNCTION]';
-                if (value instanceof HTMLElement) return '[HTML ELEMENT]';
-                return value;
-            }, 2);
+            // Берем данные из object.movie, которые мы явно прокинули при push
+            var dataToRender = object.movie || object.card || object;
+            output.textContent = safeStringify(dataToRender);
         } catch (e) {
-            output.textContent =
-                'Ошибка JSON:\n\n' +
-                e.toString() +
-                '\n\nТип object: ' +
-                typeof object;
+            output.textContent = 'Ошибка сериализации:\n\n' + e.toString();
         }
 
         container.appendChild(output);
-
         return container;
     }
 
     Lampa.Component.add(COMPONENT, component);
 
     function addButton() {
-
         try {
-
             var activity = Lampa.Activity.active();
-
-            if (!activity) return;
-
-            if (activity.component !== 'full') return;
+            if (!activity || activity.component !== 'full') return;
 
             var render = activity.activity && activity.activity.render
                 ? activity.activity.render()
                 : $('.full').last();
 
-            if (!render || !render.length) return;
-
-            if (render.find('.lumen-test-btn').length) return;
+            if (!render || !render.length || render.find('.lumen-test-btn').length) return;
 
             var buttons = render.find('.full-start__button');
-
             if (!buttons.length) return;
 
             var btn = $(
@@ -78,74 +74,29 @@
             );
 
             btn.on('hover:enter', function () {
-
-                console.log('LUMEN: КНОПКА НАЖАТА');
-
-                var movie =
-                    activity.card ||
-                    activity.movie ||
-                    (activity.activity && activity.activity.card);
-
-                console.log('LUMEN: MOVIE =', movie);
-                console.log('LUMEN: ACTIVITY =', activity);
+                var currentActivity = Lampa.Activity.active();
+                
+                // Получаем чистый объект фильма (без циклических DOM-деревьев)
+                var movieData = currentActivity.card || currentActivity.movie;
 
                 Lampa.Activity.push({
                     url: '',
                     title: PLUGIN_NAME,
                     component: COMPONENT,
-
-                    movie: movie,
-
-                    activity: activity,
-
-                    page: 1
+                    movie: movieData // Пробрасываем чистый объект
                 });
-
             });
 
             buttons.last().after(btn);
-
         } catch (e) {
-
             console.log('LUMEN BUTTON ERROR:', e);
-
         }
     }
 
     if (Lampa.Listener && Lampa.Listener.follow) {
-
         Lampa.Listener.follow('full', function () {
-
-            setTimeout(addButton, 100);
-            setTimeout(addButton, 500);
-            setTimeout(addButton, 1200);
-
+            setTimeout(addButton, 200);
+            setTimeout(addButton, 800);
         });
-
-        Lampa.Listener.follow('activity', function () {
-
-            setTimeout(addButton, 300);
-
-        });
-
     }
-
-    try {
-
-        if (!Lampa.Manifest.plugins) {
-            Lampa.Manifest.plugins = [];
-        }
-
-        Lampa.Manifest.plugins.unshift({
-            type: 'video',
-            version: VERSION,
-            name: PLUGIN_NAME,
-            description: 'Lumen diagnostic plugin',
-            component: COMPONENT
-        });
-
-    } catch (e) {}
-
-    console.log('LUMEN TEST ' + VERSION + ' LOADED');
-
 })();
