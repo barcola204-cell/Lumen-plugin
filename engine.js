@@ -1,10 +1,12 @@
 (function () {
     'use strict';
 
-    function init() {
+    function startLumen() {
         Lampa.Listener.follow('full', function (e) {
             if (e.type === 'complite') {
                 var render = e.object.activity.render();
+                
+                // Проверка: если кнопка уже есть, не создаем дубликат
                 if (render.find('.button--lumen').length) return;
 
                 var btn = $('<div class="full-start__button selector button--lumen"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg><span>Lumen Engine</span></div>');
@@ -14,7 +16,7 @@
                     var kp_id = card.kinopoisk_id || (card.account && card.account.kinopoisk_id) || '';
                     var title = card.title || card.name || card.original_title || '';
 
-                    Lampa.Noty.show('Lumen: Поиск ' + (kp_id || title));
+                    Lampa.Noty.show('Lumen: Поиск источников...');
 
                     var params = new URLSearchParams();
                     if (kp_id) params.append('kp', kp_id);
@@ -24,7 +26,7 @@
                         .then(function (res) { return res.json(); })
                         .then(function (data) {
                             if (!data || !Array.isArray(data) || data.length === 0) {
-                                Lampa.Noty.show('Lumen: Ничего не найдено');
+                                Lampa.Noty.show('Lumen: Потоки не найдены');
                                 return;
                             }
 
@@ -51,7 +53,7 @@
                             });
                         })
                         .catch(function (err) {
-                            Lampa.Noty.show('Lumen: Ошибка ' + err.message);
+                            Lampa.Noty.show('Lumen: Ошибка сети (' + err.message + ')');
                         });
                 });
 
@@ -60,6 +62,6 @@
         });
     }
 
-    if (window.appready) init();
-    else Lampa.Listener.follow('app', function (e) { if (e.type === 'ready') init(); });
+    if (window.appready) startLumen();
+    else Lampa.Listener.follow('app', function (e) { if (e.type === 'ready') startLumen(); });
 })();
