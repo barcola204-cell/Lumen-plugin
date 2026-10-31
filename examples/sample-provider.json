@@ -1,0 +1,53 @@
+{
+  "comment": "Minimal LUMEN Custom provider response. Host via Gist/Pages/your HTTPS. Sample URLs: Blender Foundation open movies (Creative Commons).",
+  "items": [
+    {
+      "title": "Big Buck Bunny",
+      "subtitle": "Blender Foundation · CC",
+      "voice": "Original",
+      "quality": "720p",
+      "url": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4",
+      "kind": "movie"
+    },
+    {
+      "title": "Sintel",
+      "subtitle": "Blender Foundation · CC",
+      "voice": "Original",
+      "quality": "1080p",
+      "qualityMap": {
+        "720p": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/Sintel.mp4",
+        "1080p": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/Sintel.mp4"
+      },
+      "url": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/Sintel.mp4",
+      "kind": "movie"
+    },
+    {
+      "title": "Demo Season 1",
+      "subtitle": "Playlist example",
+      "voice": "Original",
+      "quality": "720p",
+      "kind": "season",
+      "season": 1,
+      "playlist": [
+        {
+          "title": "S01E01 · Elephants Dream",
+          "url": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4",
+          "season": 1,
+          "episode": 1
+        },
+        {
+          "title": "S01E02 · For Bigger Blazes",
+          "url": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4",
+          "season": 1,
+          "episode": 2
+        },
+        {
+          "title": "S01E03 · For Bigger Escapes",
+          "url": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4",
+          "season": 1,
+          "episode": 3
+        }
+      ]
+    }
+  ]
+}
