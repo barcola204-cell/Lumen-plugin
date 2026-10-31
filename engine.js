@@ -1,4 +1,4 @@
-/* LUMEN v1 built 2026-10-31T21:12:37.137Z — do not edit engine.js by hand; edit src/ and run node scripts/build.js */
+/* LUMEN v1 built 2026-10-31T21:38:11.727Z — do not edit engine.js by hand; edit src/ and run node scripts/build.js */
 
 /* ===== 00-banner.js ===== */
 
@@ -14,14 +14,20 @@
 (function () {
     'use strict';
 
+    // Marker string required by Lampa extensions check: /Lampa\./ must match file body.
+    // Lampa.Plugins / Lampa.Activity / Lampa.Player are used below.
+
     if (window.lumen_plugin_loaded) return;
     window.lumen_plugin_loaded = true;
 
+    try {
+
     var LUMEN = {
-        VERSION: '1.0.0-v1',
+        VERSION: '1.0.1-v1',
         COMPONENT_SOURCES: 'lumen_sources',
         COMPONENT_EPISODES: 'lumen_episodes',
         STORAGE_PREFIX: 'lumen_',
+        _inited: false,
         log: function () {}
     };
 
@@ -1002,7 +1008,41 @@
 /* ===== 08-full-hook.js ===== */
 
     // ===== Full-card button (only full:complite + e.data.movie) =====
+    // Latest Lampa (full_start_new): .view--torrent lives inside .hide.buttons--container.
+    // Online-style insert after torrent = invisible on the card. Put a visible button into
+    // .full-start-new__buttons, and also register in buttons--container for Play menu.
     LUMEN.FullHook = {
+        openSources: function (movie) {
+            if (!movie) {
+                Lampa.Noty.show(LUMEN.t('lumen_no_movie'));
+                return;
+            }
+            LUMEN.Debug.log('push sources for ' + LUMEN.Utils.movieTitle(movie) + ' #' + movie.id);
+            Lampa.Activity.push({
+                url: '',
+                title: LUMEN.t('lumen_sources'),
+                component: LUMEN.COMPONENT_SOURCES,
+                movie: movie,
+                search: LUMEN.Utils.movieTitle(movie),
+                search_one: LUMEN.Utils.movieTitle(movie),
+                search_two: LUMEN.Utils.movieOriginal(movie),
+                page: 1
+            });
+        },
+
+        makeButton: function (movie, extraClass) {
+            var btn = $(
+                '<div class="full-start__button selector button--lumen ' + (extraClass || '') + '">'
+                    + '<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>'
+                    + '<span>' + LUMEN.t('lumen_button') + '</span>'
+                    + '</div>'
+            );
+            btn.on('hover:enter', function () {
+                LUMEN.FullHook.openSources(movie);
+            });
+            return btn;
+        },
+
         addButton: function (e) {
             try {
                 if (!e || e.type !== 'complite') return;
@@ -1013,52 +1053,47 @@
 
                 var render = e.object.activity.render();
                 if (!render || !render.length) return;
+
+                // Already mounted (visible or menu)
                 if (render.find('.button--lumen').length) return;
 
                 var movie = e.data.movie;
-                var btn = $(
-                    '<div class="full-start__button selector button--lumen">'
-                        + '<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>'
-                        + '<span>' + LUMEN.t('lumen_button') + '</span>'
-                        + '</div>'
-                );
+                var mounted = false;
 
-                btn.on('hover:enter', function () {
-                    // Always push a copy of movie on activity params (survives stop/start)
-                    var card = movie;
-                    if (!card) {
-                        Lampa.Noty.show(LUMEN.t('lumen_no_movie'));
-                        return;
-                    }
-                    LUMEN.Debug.log('push sources for ' + LUMEN.Utils.movieTitle(card) + ' #' + card.id);
-                    Lampa.Activity.push({
-                        url: '',
-                        title: LUMEN.t('lumen_sources'),
-                        component: LUMEN.COMPONENT_SOURCES,
-                        movie: card,
-                        search: LUMEN.Utils.movieTitle(card),
-                        search_one: LUMEN.Utils.movieTitle(card),
-                        search_two: LUMEN.Utils.movieOriginal(card),
-                        page: 1
-                    });
-                });
+                // 1) VISIBLE row on current full card
+                var visible = render.find('.full-start-new__buttons').first();
+                if (!visible.length) visible = render.find('.full-start__buttons').first();
+                if (visible.length) {
+                    var play = visible.find('.button--play').first();
+                    var visBtn = LUMEN.FullHook.makeButton(movie, 'button--lumen-visible');
+                    if (play.length) play.after(visBtn);
+                    else visible.prepend(visBtn);
+                    mounted = true;
+                }
 
-                var anchor = render.find('.view--torrent').first();
-                if (anchor.length) {
-                    anchor.after(btn);
-                } else {
-                    var buttons = render.find('.full-start__buttons, .full-start-new__buttons').first();
-                    if (buttons.length) buttons.prepend(btn);
-                    else {
-                        var anyBtn = render.find('.full-start__button').last();
-                        if (anyBtn.length) anyBtn.after(btn);
-                        else {
-                            LUMEN.Debug.warn('no button container to append LUMEN');
-                            return;
-                        }
+                // 2) Play-menu pool (.buttons--container) — same contract as plugins/online
+                var menuBox = render.find('.buttons--container').first();
+                if (menuBox.length) {
+                    var menuBtn = LUMEN.FullHook.makeButton(movie, 'button--lumen-menu');
+                    var torrent = menuBox.find('.view--torrent').first();
+                    if (torrent.length) torrent.after(menuBtn);
+                    else menuBox.append(menuBtn);
+                    mounted = true;
+                }
+
+                if (!mounted) {
+                    var anyBtn = render.find('.full-start__button').last();
+                    if (anyBtn.length) {
+                        anyBtn.after(LUMEN.FullHook.makeButton(movie, 'button--lumen-visible'));
+                        mounted = true;
                     }
                 }
-                LUMEN.Debug.log('LUMEN button attached');
+
+                if (!mounted) {
+                    LUMEN.Debug.warn('no button container to append LUMEN');
+                    return;
+                }
+                LUMEN.Debug.log('LUMEN button attached (visible+menu)');
             } catch (err) {
                 LUMEN.Debug.error('addButton: ' + (err && err.message ? err.message : err));
             }
@@ -1066,7 +1101,6 @@
 
         install: function () {
             Lampa.Listener.follow('full', function (e) {
-                // Do NOT listen to 'build' — movie payload may be incomplete (bug #1 hypothesis)
                 if (e.type === 'complite') LUMEN.FullHook.addButton(e);
             });
         }
@@ -1108,29 +1142,102 @@
 
 /* ===== 10-init.js ===== */
 
-    // ===== Init =====
+    // ===== Init + resilient boot =====
     LUMEN.init = function () {
-        LUMEN.injectStyles();
-        LUMEN.registerLang();
-        LUMEN.Debug.install();
-        LUMEN.registerSettings();
-        LUMEN.registerManifest();
-
-        Lampa.Component.add(LUMEN.COMPONENT_SOURCES, LUMEN.SourcesComponent);
-        Lampa.Component.add(LUMEN.COMPONENT_EPISODES, LUMEN.EpisodesComponent);
-
-        LUMEN.FullHook.install();
-        LUMEN.Debug.log('init complete v' + LUMEN.VERSION);
+        if (LUMEN._inited) return;
         try {
-            Lampa.Noty.show('LUMEN ' + LUMEN.VERSION + ' готов', { time: 2000 });
-        } catch (e) {}
+            LUMEN.injectStyles();
+            LUMEN.registerLang();
+            LUMEN.Debug.install();
+            LUMEN.registerSettings();
+            LUMEN.registerManifest();
+
+            Lampa.Component.add(LUMEN.COMPONENT_SOURCES, LUMEN.SourcesComponent);
+            Lampa.Component.add(LUMEN.COMPONENT_EPISODES, LUMEN.EpisodesComponent);
+
+            LUMEN.FullHook.install();
+            LUMEN._inited = true;
+            LUMEN.Debug.log('init complete v' + LUMEN.VERSION);
+            try {
+                Lampa.Noty.show('LUMEN ' + LUMEN.VERSION + ' готов', { time: 2500 });
+            } catch (e0) {}
+        } catch (err) {
+            LUMEN._inited = false;
+            var msg = (err && err.message) ? err.message : String(err);
+            try { console.log('LUMEN init error', err); } catch (e1) {}
+            try { if (LUMEN.Debug) LUMEN.Debug.error('init: ' + msg); } catch (e2) {}
+            try {
+                if (window.Lampa && Lampa.Noty) {
+                    Lampa.Noty.show('LUMEN ошибка init: ' + msg, { time: 8000 });
+                }
+            } catch (e3) {}
+        }
     };
 
-    if (window.appready) LUMEN.init();
-    else if (window.Lampa && Lampa.Listener) {
-        Lampa.Listener.follow('app', function (e) {
-            if (e.type === 'ready') LUMEN.init();
-        });
+    LUMEN.scheduleInit = function () {
+        try {
+            if (!window.Lampa) {
+                var waits = 0;
+                var waitLampa = setInterval(function () {
+                    waits += 1;
+                    if (window.Lampa) {
+                        clearInterval(waitLampa);
+                        LUMEN.scheduleInit();
+                    } else if (waits > 60) {
+                        clearInterval(waitLampa);
+                    }
+                }, 500);
+                return;
+            }
+
+            if (window.appready) {
+                LUMEN.init();
+                return;
+            }
+
+            if (Lampa.Listener && Lampa.Listener.follow) {
+                Lampa.Listener.follow('app', function (e) {
+                    if (e.type === 'ready') LUMEN.init();
+                });
+            }
+
+            // Fallback: Plugins.load often runs before appready; cover missed ready event.
+            var ticks = 0;
+            var timer = setInterval(function () {
+                ticks += 1;
+                if (LUMEN._inited) {
+                    clearInterval(timer);
+                    return;
+                }
+                if (window.appready) {
+                    clearInterval(timer);
+                    LUMEN.init();
+                } else if (ticks > 40) {
+                    clearInterval(timer);
+                    if (Lampa.Component && Lampa.Listener) LUMEN.init();
+                }
+            }, 500);
+        } catch (err) {
+            var msg = (err && err.message) ? err.message : String(err);
+            try { console.log('LUMEN boot error', err); } catch (e1) {}
+            try {
+                if (window.Lampa && Lampa.Noty) {
+                    Lampa.Noty.show('LUMEN ошибка boot: ' + msg, { time: 8000 });
+                }
+            } catch (e2) {}
+        }
+    };
+
+    LUMEN.scheduleInit();
+
+    } catch (fatal) {
+        window.lumen_plugin_loaded = false;
+        try { console.log('LUMEN fatal', fatal); } catch (e1) {}
+        try {
+            if (window.Lampa && Lampa.Noty) {
+                Lampa.Noty.show('LUMEN fatal: ' + (fatal && fatal.message ? fatal.message : fatal), { time: 8000 });
+            }
+        } catch (e2) {}
     }
 })();
 
